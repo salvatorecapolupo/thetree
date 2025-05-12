@@ -113,7 +113,8 @@
   <h2>La cesta</h2>
   <div id="bucket"></div>
 
-  <button onclick="checkTree()">Verifica</button>
+  <button onclick="checkTree()"> &#x2705; Verifica</button>
+  <button onclick="location.reload()"> &#x1F504; Riprova</button>
 
   <h2>The Larch</h2>
 
@@ -286,24 +287,34 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.strokeStyle = "#aaa";
       ctx.lineWidth = 1.5;
-
+    
       for (let i = 0; i < levels.length - 1; i++) {
-        const upper = levels[i].children;
-        const lower = levels[i + 1].children;
-        for (let j = 0; j < Math.min(upper.length, lower.length); j++) {
-          const from = upper[j].getBoundingClientRect();
-          const to = lower[j].getBoundingClientRect();
-          const startX = from.left + from.width / 2 - rect.left;
-          const startY = from.bottom - rect.top;
-          const endX = to.left + to.width / 2 - rect.left;
-          const endY = to.top - rect.top;
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(endX, endY);
-          ctx.stroke();
-        }
+        const parents = Array.from(levels[i].children);
+        const children = Array.from(levels[i + 1].children);
+        const ratio = Math.floor(children.length / parents.length);
+    
+        parents.forEach((parent, pi) => {
+          const parentRect = parent.getBoundingClientRect();
+          const startX = parentRect.left + parentRect.width / 2 - rect.left;
+          const startY = parentRect.bottom - rect.top;
+    
+          for (let j = 0; j < ratio; j++) {
+            const ci = pi * ratio + j;
+            if (ci >= children.length) return;
+            const child = children[ci];
+            const childRect = child.getBoundingClientRect();
+            const endX = childRect.left + childRect.width / 2 - rect.left;
+            const endY = childRect.top - rect.top;
+    
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+          }
+        });
       }
     }
+
 
     function playSound(success) {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
