@@ -116,6 +116,9 @@
   <button onclick="checkTree()"> &#x2705; Verifica</button>
   <button onclick="location.reload()"> &#x1F504; Riprova</button>
 
+<div id="summary" style="margin-top: 10px; font-size: 16px;"></div>
+
+  
   <h2>The Larch</h2>
 
   <img src="./the_larch.gif" alt="thhhhe laaaarch!"/> 
@@ -251,23 +254,51 @@
     }
 
     function checkTree() {
-      let allCorrect = true;
-      document.querySelectorAll(".node").forEach(node => {
-        const expected = correctMap[node.dataset.slot];
-        const actual = node.textContent.trim();
-        node.classList.remove("correct", "wrong");
-        if (!actual) return;
-
-        if (expected === actual) {
-          node.classList.add("correct");
-        } else {
-          node.classList.add("wrong");
-          allCorrect = false;
-        }
+      let correct = 0;
+      let total = 0;
+    
+      // Costruisci una mappa: livello -> array di etichette corrette
+      const levelMap = {};
+      for (let label in correctStructure) {
+        const level = correctStructure[label];
+        if (!levelMap[level]) levelMap[level] = [];
+        levelMap[level].push(label);
+      }
+    
+      // Leggi gli elementi da ciascun livello nell'albero dell'utente
+      const levels = document.querySelectorAll("#tree-container > div");
+      levels.forEach((levelEl, levelIndex) => {
+        const userLabels = Array.from(levelEl.children).map(el => el.textContent.trim());
+        const expectedLabels = levelMap[levelIndex] || [];
+    
+        total += expectedLabels.length;
+    
+        userLabels.forEach(label => {
+          const labelEl = levelEl.querySelector(`.node:contains('${label}')`);
+          if (expectedLabels.includes(label)) {
+            correct++;
+            labelEl.style.backgroundColor = "lightgreen";
+          } else {
+            labelEl.style.backgroundColor = "lightblue";
+          }
+        });
       });
-
-      playSound(allCorrect);
+    
+      // Suono di feedback
+      const context = new AudioContext();
+      const oscillator = context.createOscillator();
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(correct === total ? 880 : 220, context.currentTime);
+      oscillator.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.3);
+    
+      // Visualizza il riepilogo sotto il bottone
+      const summaryElement = document.getElementById("summary");
+      summaryElement.textContent = `${correct} su ${total} corretti`;
     }
+
+
 
     function shuffleArray(arr) {
       let array = arr.slice();
