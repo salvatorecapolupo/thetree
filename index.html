@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Gioco Albero N-ario Migliorato</title>
+  <title>The Larch!</title>
   <style>
     body {
       font-family: sans-serif;
@@ -102,19 +102,23 @@
   </style>
 </head>
 <body>
-  <h1>Costruisci l'Albero!</h1>
-  <p>Trascina le etichette nel posto corretto. Premi "Verifica" per controllare!</p>
+  <h1>L'albero</h1>
+  <p> Trascina le etichette nel posto corretto. Tappa su "Verifica" per controllare se corretto. </p>
 
   <div id="tree-container">
     <canvas id="lines"></canvas>
     <div id="tree"></div>
   </div>
 
-  <h2>Cesta delle Etichette</h2>
+  <h2>La cesta</h2>
   <div id="bucket"></div>
 
   <button onclick="checkTree()">Verifica</button>
 
+  <h2>The Larch</h2>
+
+  <img src="./the_larch.gif" alt="the larch"/> 
+  
   <script>
     let correctMap = {};
     let labels = [];
