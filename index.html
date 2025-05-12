@@ -3,9 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Albero N-ario Visivo</title>
+  <title>THE LARCH</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
+    body {
+      background: #f8f9fa;
+    }
+
+    .node-slot, .draggable {
+      min-width: 120px;
+      min-height: 40px;
+      padding: 0.5em;
+      margin: 1em;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .node-slot {
+      border: 2px dashed #adb5bd;
+      background: white;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .node-slot.correct {
+      background-color: #d4edda !important;
+      border-color: #28a745;
+    }
+
+    .node-slot.wrong {
+      background-color: #f8d7da !important;
+      border-color: #dc3545;
+    }
+
+    .draggable {
+      background: #dee2e6;
+      cursor: grab;
+    }
+
     .tree-container {
       display: flex;
       flex-direction: column;
@@ -21,76 +56,177 @@
       position: relative;
     }
 
-    .node {
-      background-color: #dee2e6;
-      padding: 0.5rem 1rem;
-      margin: 0 1rem;
-      border-radius: 8px;
+    #pool {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1em;
+      margin-top: 2em;
+      padding: 1em;
+      border-top: 2px solid #ccc;
+    }
+
+    .drop-hover {
+      background-color: #e2f0ff !important;
+    }
+
+    h1, h2 {
       text-align: center;
-      position: relative;
-      z-index: 1;
-      min-width: 100px;
     }
 
-    .connector {
-      position: absolute;
-      height: 2rem;
-      width: 2px;
-      background-color: #999;
-      left: 50%;
-      transform: translateX(-50%);
-      top: -2rem;
-      z-index: 0;
+    #result {
+      text-align: center;
+      font-size: 1.2rem;
+      margin-top: 1em;
     }
 
-    .branch-line {
-      position: absolute;
-      height: 2px;
-      background-color: #999;
-      top: 0;
-      z-index: 0;
-    }
-
-    .tree-level:not(:first-child)::before {
-      content: "";
-      position: absolute;
-      top: -2rem;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background-color: #999;
+    img.footer {
+      display: block;
+      margin: 3rem auto 0;
+      max-width: 300px;
     }
   </style>
 </head>
 <body class="container py-4">
 
-  <h1 class="text-center mb-4">Struttura Albero N-ario</h1>
+  <h1>THE LARCH 🌲</h1>
+  <p class="text-center">Trascina le etichette nelle posizioni corrette dell’albero gerarchico.</p>
 
-  <div class="tree-container">
+  <div class="tree-container" id="tree"></div>
 
-    <!-- Livello 1 -->
-    <div class="tree-level">
-      <div class="node">Serie A</div>
-    </div>
+  <h2>Cesta</h2>
+  <div id="pool"></div>
 
-    <!-- Livello 2 -->
-    <div class="tree-level">
-      <div class="node"><div class="connector"></div>Inter</div>
-      <div class="node"><div class="connector"></div>Milan</div>
-      <div class="node"><div class="connector"></div>Juventus</div>
-    </div>
-
-    <!-- Livello 3 -->
-    <div class="tree-level">
-      <div class="node"><div class="connector"></div>Milito</div>
-      <div class="node"><div class="connector"></div>Zanetti</div>
-      <div class="node"><div class="connector"></div>Van Basten</div>
-      <div class="node"><div class="connector"></div>Maldini</div>
-      <div class="node"><div class="connector"></div>Del Piero</div>
-      <div class="node"><div class="connector"></div>Buffon</div>
-    </div>
-
+  <div class="text-center">
+    <button class="btn btn-primary mt-3" onclick="checkTree()">Verifica</button>
+    <div id="result"></div>
   </div>
+
+  <img src="./the_larch.gif" alt="The Larch" class="footer" />
+
+  <script>
+    const treeData = {
+      "Serie A": {
+        "Milan": {
+          "Maldini": {},
+          "Van Basten": {}
+        },
+        "Juventus": {
+          "Del Piero": {},
+          "Buffon": {}
+        }
+      }
+    };
+
+    const allLabels = [];
+
+    // Ricava una lista ordinata di livelli e aspettative
+    function buildTreeUI(tree, container, level = 0) {
+      const levelDiv = document.getElementById("level-" + level) || document.createElement("div");
+      levelDiv.className = "tree-level";
+      levelDiv.id = "level-" + level;
+
+      for (const key in tree) {
+        const slot = document.createElement("div");
+        slot.className = "node-slot";
+        slot.dataset.expect = key;
+        slot.dataset.level = level;
+        slot.addEventListener("dragover", dragOver);
+        slot.addEventListener("drop", dropHandler);
+        slot.addEventListener("dragleave", dragLeave);
+        levelDiv.appendChild(slot);
+        allLabels.push(key);
+
+        buildTreeUI(tree[key], container, level + 1);
+      }
+
+      if (!document.getElementById(levelDiv.id)) {
+        container.appendChild(levelDiv);
+      }
+    }
+
+    function createDraggable(text) {
+      const el = document.createElement("div");
+      el.className = "draggable";
+      el.setAttribute("draggable", "true");
+      el.textContent = text;
+      el.addEventListener("dragstart", dragStart);
+      return el;
+    }
+
+    function dragStart(e) {
+      e.dataTransfer.setData("text/plain", e.target.textContent);
+      e.dataTransfer.effectAllowed = "move";
+      document.querySelectorAll(".draggable").forEach(el => el.classList.remove("being-dragged"));
+      e.target.classList.add("being-dragged");
+    }
+
+    function dropHandler(e) {
+      e.preventDefault();
+      e.target.classList.remove("drop-hover");
+
+      const label = e.dataTransfer.getData("text/plain");
+      const draggedEl = document.querySelector(".draggable.being-dragged");
+
+      if (!draggedEl || e.target.querySelector(".draggable")) return;
+
+      // Rimuovi da origine
+      draggedEl.remove();
+
+      // Inserisci nello slot
+      const newEl = createDraggable(label);
+      e.target.innerHTML = "";
+      e.target.appendChild(newEl);
+    }
+
+    function dragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      e.target.classList.add("drop-hover");
+    }
+
+    function dragLeave(e) {
+      e.target.classList.remove("drop-hover");
+    }
+
+    function checkTree() {
+      let correct = 0;
+      const total = allLabels.length;
+
+      document.querySelectorAll(".node-slot").forEach(slot => {
+        slot.classList.remove("correct", "wrong");
+
+        const expected = slot.dataset.expect;
+        const placed = slot.querySelector(".draggable")?.textContent;
+
+        if (placed === expected) {
+          correct++;
+          slot.classList.add("correct");
+        } else if (placed) {
+          slot.classList.add("wrong");
+        }
+      });
+
+      const result = document.getElementById("result");
+      result.textContent = `${correct} su ${total} corretti`;
+
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(correct === total ? 880 : 220, ctx.currentTime);
+      osc.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+    }
+
+    // INIT
+    buildTreeUI(treeData, document.getElementById("tree"));
+
+    // Shuffle e riempi la cesta
+    const pool = document.getElementById("pool");
+    allLabels.sort(() => Math.random() - 0.5);
+    allLabels.forEach(label => pool.appendChild(createDraggable(label)));
+  </script>
 
 </body>
 </html>
