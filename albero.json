@@ -1,0 +1,17 @@
+{
+  "Serie A": {
+    "Inter": {
+      "Bonucci": {},
+      "Chiellini": {}
+    },
+    "Milan": {
+      "Van Basten": {},
+      "Milito": {}
+    },
+    "Juventus": {}
+  },
+  "Serie B": {
+    "Palermo": {},
+    "Catanzaro": {}
+  }
+}
