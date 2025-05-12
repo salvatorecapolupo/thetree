@@ -73,7 +73,7 @@
     let labels = [];
 
     async function loadJSONTree() {
-      const res = await fetch("albero.json");
+      const res = await fetch("https://salvatorecapolupo.github.io/thetree/tree.json");
       const data = await res.json();
       generateFromJSON(data);
     }
