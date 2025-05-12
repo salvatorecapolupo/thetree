@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gioco: Ordina l'Albero N-ario</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f0f4f8;
+    }
+    h1 {
+      text-align: center;
+    }
+    #game {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #pool, #tree {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .node {
+      padding: 0.5rem 1rem;
+      background: #ffffff;
+      border: 2px solid #333;
+      border-radius: 8px;
+      cursor: grab;
+      user-select: none;
+    }
+    .dropzone {
+      min-width: 100px;
+      min-height: 40px;
+      background: #d9e8f5;
+      border: 2px dashed #666;
+      border-radius: 8px;
+      margin: 0.5rem;
+      padding: 0.5rem;
+      text-align: center;
+    }
+    .filled {
+      border-style: solid;
+      background: #c1f0c1;
+    }
+    .accessible-hint {
+      font-size: 0.9rem;
+      color: #444;
+    }
+    @media (max-width: 600px) {
+      .node, .dropzone {
+        font-size: 0.9rem;
+        min-width: 80px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Costruisci la Gerarchia!</h1>
+  <div class="accessible-hint">Trascina i ruoli nei nodi giusti dell'albero. Usa il tab per navigare con tastiera.</div>
+  <div id="game">
+    <div id="pool" aria-label="Nodi disponibili">
+      <div class="node" draggable="true">CEO</div>
+      <div class="node" draggable="true">Team Lead</div>
+      <div class="node" draggable="true">Manager</div>
+      <div class="node" draggable="true">Developer</div>
+      <div class="node" draggable="true">Intern</div>
+    </div>
+
+    <div id="tree" aria-label="Struttura ad albero da completare">
+      <div class="dropzone" data-role="CEO"></div>
+      <div class="dropzone" data-role="Manager"></div>
+      <div class="dropzone" data-role="Team Lead"></div>
+      <div class="dropzone" data-role="Developer"></div>
+      <div class="dropzone" data-role="Intern"></div>
+    </div>
+  </div>
+
+  <div id="result" style="text-align: center; font-weight: bold;"></div>
+
+  <script>
+    const nodes = document.querySelectorAll('.node');
+    const zones = document.querySelectorAll('.dropzone');
+    const result = document.getElementById('result');
+
+    nodes.forEach(node => {
+      node.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', node.textContent);
+      });
+    });
+
+    zones.forEach(zone => {
+      zone.addEventListener('dragover', e => {
+        e.preventDefault();
+        zone.style.background = '#a7c4e0';
+      });
+      zone.addEventListener('dragleave', () => {
+        zone.style.background = '#d9e8f5';
+      });
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        const data = e.dataTransfer.getData('text/plain');
+        if (!zone.classList.contains('filled')) {
+          zone.textContent = data;
+          zone.classList.add('filled');
+          checkWin();
+        }
+        zone.style.background = '#c1f0c1';
+      });
+    });
+
+    function checkWin() {
+      let correct = 0;
+      zones.forEach(z => {
+        if (z.textContent.trim() === z.dataset.role) {
+          correct++;
+        }
+      });
+      if (correct === zones.length) {
+        result.textContent = 'Bravo! Hai completato correttamente la gerarchia!';
+        result.style.color = 'green';
+      } else {
+        result.textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>
