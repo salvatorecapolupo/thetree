@@ -2,132 +2,186 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gioco: Ordina l'Albero N-ario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gioco Albero N-ario</title>
   <style>
     body {
       font-family: sans-serif;
-      margin: 0;
-      padding: 1rem;
-      background: #f0f4f8;
-    }
-    h1 {
       text-align: center;
+      background: #f0f0f0;
+      margin: 20px;
     }
-    #game {
+
+    #tree {
       display: flex;
       flex-direction: column;
       align-items: center;
+      gap: 20px;
     }
-    #pool, #tree {
+
+    .level {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
       justify-content: center;
-      margin-bottom: 1rem;
+      gap: 10px;
     }
+
     .node {
-      padding: 0.5rem 1rem;
-      background: #ffffff;
-      border: 2px solid #333;
+      width: 100px;
+      height: 50px;
+      border: 2px dashed #999;
       border-radius: 8px;
+      background-color: white;
+      line-height: 50px;
+      font-weight: bold;
+    }
+
+    .correct {
+      background-color: #a8f5a2 !important;
+    }
+
+    .wrong {
+      background-color: #a2c6f5 !important;
+    }
+
+    #bucket {
+      margin-top: 30px;
+      padding: 10px;
+      border: 2px solid #555;
+      background: #fffbe6;
+      min-height: 80px;
+    }
+
+    .label {
+      display: inline-block;
+      margin: 5px;
+      padding: 5px 10px;
+      background: #ddd;
+      border-radius: 5px;
       cursor: grab;
-      user-select: none;
     }
-    .dropzone {
-      min-width: 100px;
-      min-height: 40px;
-      background: #d9e8f5;
-      border: 2px dashed #666;
-      border-radius: 8px;
-      margin: 0.5rem;
-      padding: 0.5rem;
-      text-align: center;
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
     }
-    .filled {
-      border-style: solid;
-      background: #c1f0c1;
-    }
-    .accessible-hint {
-      font-size: 0.9rem;
-      color: #444;
-    }
-    @media (max-width: 600px) {
-      .node, .dropzone {
-        font-size: 0.9rem;
-        min-width: 80px;
-      }
-    }
+
   </style>
 </head>
 <body>
-  <h1>Costruisci la Gerarchia!</h1>
-  <div class="accessible-hint">Trascina i ruoli nei nodi giusti dell'albero. Usa il tab per navigare con tastiera.</div>
-  <div id="game">
-    <div id="pool" aria-label="Nodi disponibili">
-      <div class="node" draggable="true">CEO</div>
-      <div class="node" draggable="true">Team Lead</div>
-      <div class="node" draggable="true">Manager</div>
-      <div class="node" draggable="true">Developer</div>
-      <div class="node" draggable="true">Intern</div>
-    </div>
+  <h1>Ordina l'Albero N-ario!</h1>
+  <div id="tree"></div>
 
-    <div id="tree" aria-label="Struttura ad albero da completare">
-      <div class="dropzone" data-role="CEO"></div>
-      <div class="dropzone" data-role="Manager"></div>
-      <div class="dropzone" data-role="Team Lead"></div>
-      <div class="dropzone" data-role="Developer"></div>
-      <div class="dropzone" data-role="Intern"></div>
-    </div>
-  </div>
+  <h2>Cesta delle Etichette</h2>
+  <div id="bucket"></div>
 
-  <div id="result" style="text-align: center; font-weight: bold;"></div>
+  <button onclick="checkTree()">Verifica</button>
 
   <script>
-    const nodes = document.querySelectorAll('.node');
-    const zones = document.querySelectorAll('.dropzone');
-    const result = document.getElementById('result');
+    const MAX_LEVEL = 4;
+    const MIN_N = 2;
+    const MAX_N = 6;
 
-    nodes.forEach(node => {
-      node.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', node.textContent);
-      });
-    });
+    let labels = [];
+    let correctMap = {};
 
-    zones.forEach(zone => {
-      zone.addEventListener('dragover', e => {
-        e.preventDefault();
-        zone.style.background = '#a7c4e0';
-      });
-      zone.addEventListener('dragleave', () => {
-        zone.style.background = '#d9e8f5';
-      });
-      zone.addEventListener('drop', e => {
-        e.preventDefault();
-        const data = e.dataTransfer.getData('text/plain');
-        if (!zone.classList.contains('filled')) {
-          zone.textContent = data;
-          zone.classList.add('filled');
-          checkWin();
+    function generateTree() {
+      const tree = document.getElementById("tree");
+      const bucket = document.getElementById("bucket");
+      tree.innerHTML = "";
+      bucket.innerHTML = "";
+      correctMap = {};
+
+      const N = Math.floor(Math.random() * (MAX_N - MIN_N + 1)) + MIN_N;
+
+      let count = 1;
+      for (let level = 0; level < MAX_LEVEL; level++) {
+        const levelDiv = document.createElement("div");
+        levelDiv.className = "level";
+        const nodesAtLevel = Math.pow(N, level);
+        for (let i = 0; i < nodesAtLevel; i++) {
+          const node = document.createElement("div");
+          node.className = "node";
+          node.dataset.slot = `node-${count}`;
+          node.ondragover = allowDrop;
+          node.ondrop = drop;
+          levelDiv.appendChild(node);
+          const label = `Etichetta ${count}`;
+          correctMap[`node-${count}`] = label;
+          labels.push(label);
+          count++;
         }
-        zone.style.background = '#c1f0c1';
-      });
-    });
-
-    function checkWin() {
-      let correct = 0;
-      zones.forEach(z => {
-        if (z.textContent.trim() === z.dataset.role) {
-          correct++;
-        }
-      });
-      if (correct === zones.length) {
-        result.textContent = 'Bravo! Hai completato correttamente la gerarchia!';
-        result.style.color = 'green';
-      } else {
-        result.textContent = '';
+        tree.appendChild(levelDiv);
       }
+
+      // Mischia le etichette
+      labels = shuffleArray(labels);
+      labels.forEach(text => {
+        const span = document.createElement("span");
+        span.className = "label";
+        span.textContent = text;
+        span.draggable = true;
+        span.ondragstart = drag;
+        bucket.appendChild(span);
+      });
     }
+
+    function allowDrop(e) {
+      e.preventDefault();
+    }
+
+    function drag(e) {
+      e.dataTransfer.setData("text", e.target.textContent);
+    }
+
+    function drop(e) {
+      e.preventDefault();
+      const data = e.dataTransfer.getData("text");
+
+      // Se già contiene qualcosa, lo rimetti nel bucket
+      if (e.target.textContent.trim() !== "") {
+        const old = e.target.textContent;
+        const span = document.createElement("span");
+        span.className = "label";
+        span.textContent = old;
+        span.draggable = true;
+        span.ondragstart = drag;
+        document.getElementById("bucket").appendChild(span);
+      }
+
+      e.target.textContent = data;
+
+      // Rimuove la label dal bucket
+      [...document.querySelectorAll("#bucket .label")].forEach(el => {
+        if (el.textContent === data) el.remove();
+      });
+    }
+
+    function checkTree() {
+      document.querySelectorAll(".node").forEach(node => {
+        const expected = correctMap[node.dataset.slot];
+        const actual = node.textContent.trim();
+        node.classList.remove("correct", "wrong");
+        if (!actual) return;
+        if (expected === actual) {
+          node.classList.add("correct");
+        } else {
+          node.classList.add("wrong");
+        }
+      });
+    }
+
+    function shuffleArray(array) {
+      let arr = array.slice();
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    generateTree();
   </script>
 </body>
 </html>
