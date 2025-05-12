@@ -118,21 +118,23 @@
   <script>
     let correctMap = {};
     let labels = [];
-    const jsonFiles = [
-      "https://salvatorecapolupo.github.io/thetree/albero1.json", 
-      "https://salvatorecapolupo.github.io/thetree/albero2.json", 
-      "https://salvatorecapolupo.github.io/thetree/albero3.json",
-      "https://salvatorecapolupo.github.io/thetree/albero4.json", 
-      "https://salvatorecapolupo.github.io/thetree/albero5.json", 
-      "https://salvatorecapolupo.github.io/thetree/albero6.json"
-    ]; 
+
+    const jsonFiles = ["./albero1.json", "./albero2.json", "./albero3.json"];
 
     async function loadJSONTree() {
       const randomFile = jsonFiles[Math.floor(Math.random() * jsonFiles.length)];
-      const res = await fetch(randomFile);
-      const data = await res.json();
-      generateFromJSON(data);
+      try {
+        const res = await fetch(randomFile);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        generateFromJSON(data);
+      } catch (error) {
+        console.error("Errore nel caricamento del file JSON:", error);
+      }
     }
+
 
     function generateFromJSON(data) {
       const tree = document.getElementById("tree");
