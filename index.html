@@ -2,55 +2,48 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gioco Albero N-ario</title>
+  <title>Albero N-ario da JSON</title>
   <style>
     body {
       font-family: sans-serif;
-      text-align: center;
       background: #f0f0f0;
+      text-align: center;
       margin: 20px;
     }
-
     #tree {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 20px;
     }
-
     .level {
       display: flex;
       justify-content: center;
+      flex-wrap: wrap;
       gap: 10px;
     }
-
     .node {
-      width: 100px;
-      height: 50px;
-      border: 2px dashed #999;
+      width: 140px;
+      min-height: 40px;
+      border: 2px dashed #888;
       border-radius: 8px;
       background-color: white;
-      line-height: 50px;
-      font-weight: bold;
+      line-height: 40px;
+      padding: 5px;
     }
-
     .correct {
       background-color: #a8f5a2 !important;
     }
-
     .wrong {
       background-color: #a2c6f5 !important;
     }
-
     #bucket {
       margin-top: 30px;
       padding: 10px;
       border: 2px solid #555;
       background: #fffbe6;
-      min-height: 80px;
+      min-height: 60px;
     }
-
     .label {
       display: inline-block;
       margin: 5px;
@@ -59,18 +52,15 @@
       border-radius: 5px;
       cursor: grab;
     }
-
     button {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 16px;
-      cursor: pointer;
     }
-
   </style>
 </head>
 <body>
-  <h1>Ordina l'Albero N-ario!</h1>
+  <h1>Costruisci l'Albero da JSON</h1>
   <div id="tree"></div>
 
   <h2>Cesta delle Etichette</h2>
@@ -79,56 +69,82 @@
   <button onclick="checkTree()">Verifica</button>
 
   <script>
-    const MAX_LEVEL = 4;
-    const MIN_N = 2;
-    const MAX_N = 6;
-
-    let labels = [];
     let correctMap = {};
+    let labels = [];
 
-    function generateTree() {
+    async function loadJSONTree() {
+      const res = await fetch("albero.json");
+      const data = await res.json();
+      generateFromJSON(data);
+    }
+
+    function generateFromJSON(data) {
       const tree = document.getElementById("tree");
       const bucket = document.getElementById("bucket");
       tree.innerHTML = "";
       bucket.innerHTML = "";
       correctMap = {};
+      labels = [];
 
-      const N = Math.floor(Math.random() * (MAX_N - MIN_N + 1)) + MIN_N;
+      const level1 = document.createElement("div");
+      level1.className = "level";
+      Object.keys(data).forEach((serie, i) => {
+        const node = createDroppableNode(`L1-${i}`, serie);
+        level1.appendChild(node);
+        correctMap[`L1-${i}`] = serie;
+        labels.push(serie);
+      });
+      tree.appendChild(level1);
 
-      let count = 1;
-      for (let level = 0; level < MAX_LEVEL; level++) {
-        const levelDiv = document.createElement("div");
-        levelDiv.className = "level";
-        const nodesAtLevel = Math.pow(N, level);
-        for (let i = 0; i < nodesAtLevel; i++) {
-          const node = document.createElement("div");
-          node.className = "node";
-          node.dataset.slot = `node-${count}`;
-          node.ondragover = allowDrop;
-          node.ondrop = drop;
-          levelDiv.appendChild(node);
-          const label = `Etichetta ${count}`;
-          correctMap[`node-${count}`] = label;
-          labels.push(label);
-          count++;
-        }
-        tree.appendChild(levelDiv);
-      }
+      const level2 = document.createElement("div");
+      level2.className = "level";
+      let l2Count = 0;
+      Object.entries(data).forEach(([serie, squadre]) => {
+        Object.keys(squadre).forEach(squadra => {
+          const node = createDroppableNode(`L2-${l2Count}`, squadra);
+          level2.appendChild(node);
+          correctMap[`L2-${l2Count}`] = squadra;
+          labels.push(squadra);
+          l2Count++;
+        });
+      });
+      tree.appendChild(level2);
 
-      // Mischia le etichette
-      labels = shuffleArray(labels);
-      labels.forEach(text => {
-        const span = document.createElement("span");
-        span.className = "label";
-        span.textContent = text;
-        span.draggable = true;
-        span.ondragstart = drag;
-        bucket.appendChild(span);
+      const level3 = document.createElement("div");
+      level3.className = "level";
+      let l3Count = 0;
+      Object.entries(data).forEach(([serie, squadre]) => {
+        Object.values(squadre).forEach(giocatori => {
+          giocatori.forEach(giocatore => {
+            const node = createDroppableNode(`L3-${l3Count}`, giocatore);
+            level3.appendChild(node);
+            correctMap[`L3-${l3Count}`] = giocatore;
+            labels.push(giocatore);
+            l3Count++;
+          });
+        });
+      });
+      tree.appendChild(level3);
+
+      // Mescola e crea le etichette
+      shuffleArray(labels).forEach(text => {
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = text;
+        label.draggable = true;
+        label.ondragstart = drag;
+        bucket.appendChild(label);
       });
     }
 
-    function allowDrop(e) {
-      e.preventDefault();
+    function createDroppableNode(id, content = "") {
+      const node = document.createElement("div");
+      node.className = "node";
+      node.dataset.slot = id;
+      node.textContent = "";
+      node.ondragover = e => e.preventDefault();
+      node.ondrop = drop;
+      return node;
     }
 
     function drag(e) {
@@ -139,7 +155,7 @@
       e.preventDefault();
       const data = e.dataTransfer.getData("text");
 
-      // Se già contiene qualcosa, lo rimetti nel bucket
+      // Se già contiene qualcosa, lo rimette nel bucket
       if (e.target.textContent.trim() !== "") {
         const old = e.target.textContent;
         const span = document.createElement("span");
@@ -172,16 +188,16 @@
       });
     }
 
-    function shuffleArray(array) {
-      let arr = array.slice();
-      for (let i = arr.length - 1; i > 0; i--) {
+    function shuffleArray(arr) {
+      let array = arr.slice();
+      for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
+        [array[i], array[j]] = [array[j], array[i]];
       }
-      return arr;
+      return array;
     }
 
-    generateTree();
+    loadJSONTree();
   </script>
 </body>
 </html>
