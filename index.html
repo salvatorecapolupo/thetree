@@ -269,12 +269,15 @@
       const levels = document.querySelectorAll("#tree-container > div");
       levels.forEach((levelEl, levelIndex) => {
         const userLabels = Array.from(levelEl.children).map(el => el.textContent.trim());
-        const expectedLabels = levelMap[levelIndex] || [];
+        const expectedLabels = levelMap[levelIndex + 1] || []; // Aggiungi +1 perché levelIndex parte da 0
     
         total += expectedLabels.length;
     
+        // Verifica le etichette dell'utente per ciascun livello
         userLabels.forEach(label => {
-          const labelEl = levelEl.querySelector(`.node:contains('${label}')`);
+          // Cerca il nodo che contiene l'etichetta
+          const labelEl = Array.from(levelEl.children).find(child => child.textContent.trim() === label);
+    
           if (expectedLabels.includes(label)) {
             correct++;
             labelEl.style.backgroundColor = "lightgreen";
@@ -297,8 +300,6 @@
       const summaryElement = document.getElementById("summary");
       summaryElement.textContent = `${correct} su ${total} corretti`;
     }
-
-
 
     function shuffleArray(arr) {
       let array = arr.slice();
