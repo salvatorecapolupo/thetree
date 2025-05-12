@@ -5,35 +5,102 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gioco Albero N-ario</title>
   <style>
-    body { font-family: sans-serif; margin: 2em; background: #f7f7f7; }
-    h1 { text-align: center; }
-    #tree, #pool { display: flex; flex-direction: column; gap: 1em; margin: 1em auto; width: 80%; }
-    .level { border: 2px dashed #ccc; padding: 1em; min-height: 3em; background: #fff; }
-    .level-title { font-weight: bold; margin-bottom: 0.5em; }
+    body {
+      font-family: sans-serif;
+      margin: 2em;
+      background: #f4f4f4;
+      text-align: center;
+    }
+    h1 { margin-bottom: 0.5em; }
+    p { color: #666; }
+
+    #pool {
+      margin: 2em auto;
+      padding: 1em;
+      width: 80%;
+      background: #fff8dc;
+      border: 2px dashed #bbb;
+      border-radius: 10px;
+    }
+
     .node {
       display: inline-block;
-      margin: 0.2em;
+      margin: 0.5em;
       padding: 0.5em 1em;
       background: #ddd;
-      border-radius: 10px;
+      border-radius: 20px;
       cursor: grab;
     }
-    .correct { background: lightgreen !important; }
-    .wrong { background: lightblue !important; }
-    #summary { text-align: center; font-size: 1.2em; margin-top: 1em; }
-    button { margin: 1em auto; display: block; padding: 0.5em 1.5em; font-size: 1em; cursor: pointer; }
+
+    .correct { background-color: lightblue !important; }
+    .wrong { background-color: lightcoral !important; }
+
+    #tree {
+      display: flex;
+      justify-content: center;
+      margin: 2em auto;
+    }
+
+    .tree-level {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      position: relative;
+    }
+
+    .level-box {
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      min-height: 60px;
+      min-width: 150px;
+      padding: 1em;
+      margin: 1em;
+      background: white;
+      position: relative;
+    }
+
+    .level-box::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      left: 50%;
+      width: 2px;
+      height: 40px;
+      background: #999;
+      transform: translateX(-50%);
+    }
+
+    .tree-level:first-child .level-box::before {
+      display: none;
+    }
+
+    button {
+      margin: 1em;
+      padding: 0.5em 1.5em;
+      font-size: 1em;
+      cursor: pointer;
+    }
+
+    #summary {
+      font-size: 1.2em;
+      margin-top: 1em;
+    }
   </style>
 </head>
 <body>
   <h1>Ordina l'Albero N-ario</h1>
+  <p>Trascina le etichette nei livelli dell’albero secondo la loro gerarchia logica.</p>
+
   <div id="tree"></div>
-  <div id="pool"><strong>Cesta:</strong></div>
+
+  <div id="pool"><strong>Trascina da qui:</strong></div>
+
   <button onclick="checkTree()">Verifica</button>
   <button onclick="location.reload()">Riprova</button>
   <div id="summary"></div>
 
   <script>
-    // Simula più file JSON possibili
     const jsonDataArray = [
       {
         "Serie A": {
@@ -56,32 +123,10 @@
           },
           "Catanzaro": {}
         }
-      },
-      {
-        "Animali": {
-          "Mammiferi": {
-            "Cane": {},
-            "Gatto": {}
-          },
-          "Uccelli": {
-            "Aquila": {},
-            "Pappagallo": {}
-          }
-        },
-        "Piante": {
-          "Alberi": {
-            "Quercia": {},
-            "Faggio": {}
-          },
-          "Fiori": {
-            "Rosa": {},
-            "Girasole": {}
-          }
-        }
       }
     ];
 
-    let correctMap = {}; // etichetta -> livello
+    let correctMap = {};
 
     function buildCorrectMap(tree, level = 1) {
       for (let key in tree) {
@@ -106,20 +151,24 @@
       el.textContent = label;
       el.addEventListener("dragstart", e => {
         e.dataTransfer.setData("text/plain", label);
+        setTimeout(() => el.style.display = "none", 0); // Hides original on drag
+      });
+      el.addEventListener("dragend", () => {
+        el.style.display = "inline-block";
       });
       return el;
     }
 
     function setupDragAndDrop() {
-      document.querySelectorAll(".level").forEach(level => {
-        level.addEventListener("dragover", e => e.preventDefault());
-        level.addEventListener("drop", e => {
+      document.querySelectorAll(".level-box, #pool").forEach(zone => {
+        zone.addEventListener("dragover", e => e.preventDefault());
+        zone.addEventListener("drop", e => {
           e.preventDefault();
           const label = e.dataTransfer.getData("text/plain");
-          const existing = Array.from(level.children).find(c => c.textContent === label);
-          if (!existing) {
-            const dragged = createDraggable(label);
-            level.appendChild(dragged);
+          const dragged = document.querySelector(`.node:contains('${label}')`) ||
+                          [...document.querySelectorAll('.node')].find(n => n.textContent === label);
+          if (dragged) {
+            zone.appendChild(dragged);
           }
         });
       });
@@ -129,29 +178,33 @@
       let correct = 0;
       let total = Object.keys(correctMap).length;
 
-      document.querySelectorAll(".node").forEach(n => n.classList.remove("correct", "wrong"));
+      document.querySelectorAll(".node").forEach(n => {
+        n.classList.remove("correct", "wrong");
+      });
 
-      document.querySelectorAll(".level").forEach((levelEl, index) => {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+      document.querySelectorAll(".level-box").forEach((box, index) => {
         const level = index + 1;
-        Array.from(levelEl.querySelectorAll(".node")).forEach(node => {
+        Array.from(box.querySelectorAll(".node")).forEach(node => {
           const label = node.textContent.trim();
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+
           if (correctMap[label] === level) {
             node.classList.add("correct");
             correct++;
+            osc.frequency.setValueAtTime(880, ctx.currentTime); // alta frequenza
           } else {
             node.classList.add("wrong");
+            osc.frequency.setValueAtTime(220, ctx.currentTime); // bassa frequenza
           }
+
+          osc.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.1);
         });
       });
-
-      // Audio feedback
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.type = "square";
-      osc.frequency.setValueAtTime(correct === total ? 880 : 220, ctx.currentTime);
-      osc.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.2);
 
       document.getElementById("summary").textContent = `${correct} su ${total} corretti`;
     }
@@ -159,26 +212,25 @@
     function buildTreeUI(levels = 4) {
       const treeDiv = document.getElementById("tree");
       for (let i = 1; i <= levels; i++) {
-        const div = document.createElement("div");
-        div.className = "level";
-        const label = document.createElement("div");
-        label.className = "level-title";
-        label.textContent = `Livello ${i}`;
-        div.appendChild(label);
-        treeDiv.appendChild(div);
+        const levelCol = document.createElement("div");
+        levelCol.className = "tree-level";
+
+        const box = document.createElement("div");
+        box.className = "level-box";
+        box.innerHTML = `<strong>Livello ${i}</strong>`;
+        levelCol.appendChild(box);
+        treeDiv.appendChild(levelCol);
       }
     }
 
-    // Main
+    // Main init
     const data = jsonDataArray[Math.floor(Math.random() * jsonDataArray.length)];
     buildCorrectMap(data);
     const allLabels = flattenLabels(data);
     allLabels.sort(() => Math.random() - 0.5);
-
     allLabels.forEach(label => {
       document.getElementById("pool").appendChild(createDraggable(label));
     });
-
     buildTreeUI();
     setupDragAndDrop();
   </script>
