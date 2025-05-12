@@ -1,0 +1,11 @@
+{
+  "Serie A": {
+    "Inter": ["Milito", "Handanovic"],
+    "Milan": ["Van Basten", "Maldini"],
+    "Juventus": ["Bonucci", "Chiellini"]
+  },
+  "Serie B": {
+    "Palermo": ["Brunori"],
+    "Catanzaro": ["Iemmello"]
+  }
+}
