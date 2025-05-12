@@ -118,7 +118,14 @@
   <script>
     let correctMap = {};
     let labels = [];
-    const jsonFiles = ["albero1.json", "albero2.json", "albero3.json"]; // Aggiungi altri file qui
+    const jsonFiles = [
+      "https://salvatorecapolupo.github.io/thetree/albero1.json", 
+      "https://salvatorecapolupo.github.io/thetree/albero2.json", 
+      "https://salvatorecapolupo.github.io/thetree/albero3.json",
+      "https://salvatorecapolupo.github.io/thetree/albero4.json", 
+      "https://salvatorecapolupo.github.io/thetree/albero5.json", 
+      "https://salvatorecapolupo.github.io/thetree/albero6.json"
+    ]; 
 
     async function loadJSONTree() {
       const randomFile = jsonFiles[Math.floor(Math.random() * jsonFiles.length)];
