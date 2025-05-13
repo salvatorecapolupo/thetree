@@ -1,161 +1,24 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>THE LARCH</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <style>
-    body { background: #f9f9f9; padding: 1rem; font-family: sans-serif; }
-    h1 { text-align: center; margin-bottom: 2rem; }
-    #tree-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-    .tree-level { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
-    .tree-slot {
-      min-width: 100px;
-      min-height: 50px;
-      border: 2px dashed #ccc;
-      border-radius: 5px;
-      background-color: #fff;
-      padding: 0.5rem;
-      position: relative;
-    }
-    .label {
-      padding: 5px 10px;
-      background-color: #e0e0e0;
-      border-radius: 8px;
-      cursor: grab;
-      display: inline-block;
-      user-select: none;
-    }
-    .correct { background-color: #90ee90 !important; }
-    .wrong { background-color: #f28b82 !important; }
-    #pool { margin: 2rem auto; padding: 1rem; background: #eee; border-radius: 5px; display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
-    #summary { text-align: center; font-size: 1.2rem; margin-top: 1rem; }
-    #footer-img { display: block; margin: 2rem auto; width: 100px; }
-  </style>
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
 </head>
 <body>
-  <h1>THE LARCH 🌲</h1>
-  <div id="tree-container"></div>
-  <div class="text-center mt-4">
-    <button class="btn btn-primary" onclick="checkTree()">Verifica</button>
-    <button class="btn btn-secondary ms-2" onclick="location.reload()">Riprova</button>
+  <h1>🌲 THE LARCH 🌲</h1>
+  <div id="game">
+    <div id="tree-container"></div>
+    <div id="basket">
+      <h2>🧺 Basket</h2>
+      <div id="leaves"></div>
+    </div>
   </div>
-  <div id="summary"></div>
-  <div id="pool" class="mt-5"><strong>Etichette:</strong></div>
-  <img src="./the_larch.gif" id="footer-img" alt="The Larch">
-  
-  <script>
-    const dataURL = 'https://gist.githubusercontent.com/salvatorecapolupo/17d1f5c860d68cb215fc9ab9be8913f4/raw/treeData.json';
-    let correctMap = {};
-
-    async function loadData() {
-      const res = await fetch(dataURL);
-      const data = await res.json();
-      buildCorrectMap(data.tree);
-      buildTreeUI(data.tree);
-      fillPool(data.labels);
-    }
-
-    function buildCorrectMap(obj, level = 0) {
-      for (let key in obj) {
-        correctMap[key] = level;
-        buildCorrectMap(obj[key], level + 1);
-      }
-    }
-
-    function buildTreeUI(obj, level = 0, container = document.getElementById('tree-container')) {
-      const levelId = 'level-' + level;
-      let levelDiv = document.getElementById(levelId);
-      if (!levelDiv) {
-        levelDiv = document.createElement('div');
-        levelDiv.className = 'tree-level';
-        levelDiv.id = levelId;
-        container.appendChild(levelDiv);
-      }
-
-      for (let key in obj) {
-        const slot = document.createElement('div');
-        slot.className = 'tree-slot';
-        slot.dataset.expected = key;
-        slot.dataset.level = level;
-        slot.ondragover = e => e.preventDefault();
-        slot.ondrop = e => handleDrop(e, slot);
-        levelDiv.appendChild(slot);
-        buildTreeUI(obj[key], level + 1, container);
-      }
-    }
-
-    function fillPool(labels) {
-      const pool = document.getElementById('pool');
-      labels.sort(() => Math.random() - 0.5);
-      labels.forEach(label => {
-        const el = createDraggable(label);
-        pool.appendChild(el);
-      });
-    }
-
-    function createDraggable(text) {
-      const el = document.createElement('div');
-      el.className = 'label';
-      el.draggable = true;
-      el.textContent = text;
-      el.dataset.label = text;
-      el.ondragstart = e => {
-        e.dataTransfer.setData('text/plain', text);
-        e.dataTransfer.setData('from', el.parentElement.id || 'pool');
-      };
-      return el;
-    }
-
-    function handleDrop(e, targetSlot) {
-      const label = e.dataTransfer.getData('text/plain');
-      const from = e.dataTransfer.getData('from');
-      const existing = targetSlot.querySelector('.label');
-
-      if (existing) {
-        document.getElementById('pool').appendChild(existing);
-      }
-
-      const dragged = Array.from(document.querySelectorAll('.label')).find(el => el.textContent === label);
-      if (dragged) {
-        targetSlot.appendChild(dragged);
-      }
-    }
-
-    function checkTree() {
-      let correct = 0;
-      let total = Object.keys(correctMap).length;
-
-      document.querySelectorAll('.label').forEach(n => n.classList.remove('correct', 'wrong'));
-
-      document.querySelectorAll('.tree-slot').forEach(slot => {
-        const node = slot.querySelector('.label');
-        if (!node) return;
-        const label = node.dataset.label;
-        const expectedLevel = parseInt(slot.dataset.level);
-        const actualLevel = correctMap[label];
-        if (expectedLevel === actualLevel && slot.dataset.expected === label) {
-          node.classList.add('correct');
-          correct++;
-        } else {
-          node.classList.add('wrong');
-        }
-      });
-
-      // Feedback audio
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.type = "square";
-      osc.frequency.setValueAtTime(correct === total ? 880 : 220, ctx.currentTime);
-      osc.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.2);
-
-      document.getElementById('summary').textContent = `${correct} su ${total} corretti`;
-    }
-
-    loadData();
-  </script>
+  <script src="./config.js"></script>
+  <script src="./script.js"></script>
 </body>
 </html>
