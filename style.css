@@ -1,0 +1,46 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #e9f5ec;
+  text-align: center;
+}
+
+#game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#tree-container {
+  width: 100%;
+  max-width: 800px;
+  height: 400px;
+  margin: 20px auto;
+  border: 2px dashed #8bc34a;
+  position: relative;
+}
+
+#basket {
+  background: #fffbe6;
+  border: 2px solid #ffcc80;
+  padding: 10px;
+  width: 90%;
+  max-width: 800px;
+}
+
+#leaves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.leaf {
+  background: #c8e6c9;
+  border: 1px solid #388e3c;
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: grab;
+  user-select: none;
+}
