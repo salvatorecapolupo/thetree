@@ -1,72 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <title>Tree Sorting Game</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
   <style>
-    .tree ul { list-style: none; padding-left: 1rem; }
-    .tree li { margin-bottom: 1rem; }
+    body { background: #f0f2f5; }
+    .tree-container { position: relative; padding: 20px; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .tree ul { position: relative; padding-left: 1rem; }
+    .tree ul::before { content: ''; position: absolute; top: 0; left: 0.5rem; width: 2px; height: 100%; background: #ccc; }
+    .tree li { margin: 1rem 0; position: relative; padding-left: 1rem; }
+    .tree li::before { content: ''; position: absolute; top: 12px; left: 0; width: 1rem; height: 2px; background: #ccc; }
+
     .drop-zone {
-      min-height: 40px;
-      border: 2px dashed #6c757d;
-      border-radius: 4px;
-      padding: 8px;
-      text-align: center;
-      position: relative;
-      transition: background-color 0.3s;
+      min-height: 40px; border: 2px dashed #007bff; border-radius: 6px;
+      background: rgba(0,123,255,0.05); transition: background-color 0.3s;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; color: #007bff; margin-top: 5px;
     }
-    .drop-zone.placeholder::after {
-      content: 'Trascina qui';
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      color: #6c757d;
-      font-size: 0.9rem;
-      pointer-events: none;
-    }
+    .drop-zone.placeholder { color: #007bff; }
+    .drop-zone.valid { background: #d4edda; border-color: #28a745; color: #155724; }
+    .drop-zone.invalid { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+
     .node {
-      display: inline-block;
-      padding: 6px 12px;
-      margin: 4px;
-      background-color: #f8f9fa;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: move;
-      user-select: none;
-      transition: transform 0.3s ease, opacity 0.3s ease;
+      padding: 6px 12px; margin: 4px;
+      background: #ffffff; border: 1px solid #007bff;
+      border-radius: 20px; cursor: move;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
     }
-    .node.slide-away {
-      transform: translateX(50px);
-      opacity: 0;
-    }
-    .drop-zone.valid { background-color: #d4edda; }
-    .drop-zone.invalid { background-color: #f8d7da; }
-    @media (max-width: 576px) {
-      .tree { font-size: 0.9rem; }
-      .node { padding: 5px 10px; margin: 3px; }
-    }
+    .node:active { transform: scale(0.95); }
+
+    #shuffled { min-height: 100px; background: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex; flex-wrap: wrap; }
+
+    .controls { margin-top: 15px; }
   </style>
 </head>
 <body>
-<div class="container py-4">
+<div class="container py-5">
   <h2 class="text-center mb-4">Tree Sorting Game</h2>
   <div class="row">
-    <div class="col-sm-12 col-md-4 mb-4">
-      <div class="card">
-        <div class="card-header">Nodi da Ordinare</div>
-        <div id="shuffled" class="card-body" ondragover="allowDrop(event)" ondrop="dropToShuffled(event)"></div>
+    <div class="col-lg-4">
+      <div>
+        <h5>Nodi da Ordinare</h5>
+        <div id="shuffled" ondragover="allowDrop(event)" ondrop="dropToPool(event)"></div>
       </div>
     </div>
-    <div class="col-sm-12 col-md-8 mb-4 tree">
-      <div class="card">
-        <div class="card-header">Struttura Albero</div>
-        <div id="tree" class="card-body"></div>
+    <div class="col-lg-8">
+      <h5>Struttura Albero</h5>
+      <div class="tree-container tree">
+        <div id="tree"></div>
       </div>
     </div>
   </div>
-  <div class="text-center">
+  <div class="text-center controls">
     <button class="btn btn-success mr-2" onclick="validateTree()">Valida</button>
     <button class="btn btn-secondary" onclick="resetGame()">Reset</button>
     <p id="score" class="mt-3 font-weight-bold"></p>
@@ -74,105 +63,55 @@
 </div>
 
 <script>
-  const treeData = {
-    id: 1, label: 'Root', children: [
-      { id: 2, label: 'Child 1', children: [
-        { id: 4, label: 'Subchild 1', children: [] },
-        { id: 5, label: 'Subchild 2', children: [] }
-      ]},
-      { id: 3, label: 'Child 2', children: [] }
-    ]
-  };
+  const treeData = { id:1,label:'Root',children:[
+      {id:2,label:'Child 1',children:[{id:4,label:'Subchild 1',children:[]},{id:5,label:'Subchild 2',children:[]}]},
+      {id:3,label:'Child 2',children:[]}
+    ]};
 
-  let nodes = [];
-  function flatten(node, parentId = null) {
-    nodes.push({ id: node.id, label: node.label, parent: parentId });
-    node.children.forEach(child => flatten(child, node.id));
-  }
-  flatten(treeData);
+  let nodes=[],shuffled=[];
+  function flatten(n,p=null){ nodes.push({id:n.id,label:n.label,parent:p}); n.children.forEach(c=>flatten(c,n.id)); }
+  function init(){ nodes=[]; flatten(treeData); shuffled=nodes.slice().sort(()=>Math.random()-0.5); render(); document.getElementById('score').textContent=''; }
 
-  let shuffled = [];
-  function init() {
-    shuffled = nodes.slice().sort(() => Math.random() - 0.5);
-    render();
+  function createNode(n){ const el=document.createElement('div'); el.className='node'; el.draggable=true; el.textContent=n.label; el.dataset.id=n.id;
+    el.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',n.id)); return el;
   }
 
-  function createNode(n) {
-    const div = document.createElement('div');
-    div.className = 'node'; div.draggable = true;
-    div.dataset.id = n.id; div.textContent = n.label;
-    div.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', n.id));
-    return div;
+  function createTree(data){ const ul=document.createElement('ul'); data.forEach(item=>{
+      const li=document.createElement('li');
+      const box=document.createElement('div'); box.textContent=item.label; box.style.fontWeight='600'; li.appendChild(box);
+      const dz=document.createElement('div'); dz.className='drop-zone placeholder'; dz.dataset.expected=item.id;
+      dz.addEventListener('dragover',allowDrop); dz.addEventListener('drop',e=>dropToZone(e,dz)); li.appendChild(dz);
+      if(item.children.length) li.appendChild(createTree(item.children)); ul.appendChild(li);
+    }); return ul;
   }
 
-  function createList(data) {
-    const ul = document.createElement('ul');
-    data.forEach(item => {
-      const li = document.createElement('li');
-      const title = document.createElement('span');
-      title.textContent = item.label;
-      li.appendChild(title);
-      const dz = document.createElement('div');
-      dz.className = 'drop-zone placeholder'; dz.dataset.expected = item.id;
-      dz.addEventListener('dragover', allowDrop);
-      dz.addEventListener('drop', e => dropToZone(e, dz));
-      li.appendChild(dz);
-      if (item.children.length) li.appendChild(createList(item.children));
-      ul.appendChild(li);
+  function render(){ const pool=document.getElementById('shuffled'), tree=document.getElementById('tree'); pool.innerHTML=''; tree.innerHTML='';
+    shuffled.forEach(n=>pool.appendChild(createNode(n)));
+    tree.appendChild(createTree([treeData]));
+  }
+
+  function allowDrop(e){ e.preventDefault(); }
+  function dropToZone(e,zone){ e.preventDefault(); const id=e.dataTransfer.getData('text/plain'); const n=document.querySelector(`[data-id='${id}']`);
+    // if zone has a node, move it back
+    if(zone.firstChild && zone.firstChild.classList.contains('node')) dropToPool({dataTransfer:{getData:()=>zone.firstChild.dataset.id}},true);
+    zone.classList.remove('placeholder'); zone.innerHTML=''; zone.appendChild(n);
+  }
+  function dropToPool(e,returning=false){ e.preventDefault(); const id=e.dataTransfer.getData('text/plain'); const n=document.querySelector(`[data-id='${id}']`);
+    // check duplicate
+    if(!returning && document.getElementById('shuffled').contains(n)) return;
+    document.getElementById('shuffled').appendChild(n);
+  }
+
+  function validateTree(){ let correct=0;
+    document.querySelectorAll('.drop-zone').forEach(z=>{
+      const exp=z.dataset.expected; const child=z.querySelector('.node');
+      if(child && child.dataset.id===exp){ z.classList.add('valid'); z.classList.remove('invalid'); correct++; }
+      else{ z.classList.add('invalid'); z.classList.remove('valid'); }
     });
-    return ul;
+    document.getElementById('score').textContent=`Punteggio: ${Math.round(correct/nodes.length*100)}%`;
   }
 
-  function render() {
-    const s = document.getElementById('shuffled');
-    const t = document.getElementById('tree');
-    s.innerHTML = ''; t.innerHTML = '';
-    shuffled.forEach(n => s.appendChild(createNode(n)));
-    t.appendChild(createList([treeData]));
-  }
-
-  function allowDrop(e) { e.preventDefault(); }
-
-  function dropToZone(e, zone) {
-    e.preventDefault();
-    const id = e.dataTransfer.getData('text/plain');
-    const node = document.querySelector(`.node[data-id='${id}']`);
-    if (zone.firstChild) zone.firstChild.remove();
-    zone.classList.remove('placeholder');
-    zone.appendChild(node);
-  }
-
-  function dropToShuffled(e) {
-    e.preventDefault();
-    const id = e.dataTransfer.getData('text/plain');
-    const node = document.querySelector(`.node[data-id='${id}']`);
-    node.classList.add('slide-away');
-    setTimeout(() => {
-      node.classList.remove('slide-away');
-      e.currentTarget.appendChild(node);
-    }, 300);
-  }
-
-  function validateTree() {
-    let correct = 0;
-    document.querySelectorAll('.drop-zone').forEach(z => {
-      const expected = z.dataset.expected;
-      const child = z.querySelector('.node');
-      if (child && child.dataset.id === expected) {
-        z.classList.add('valid'); z.classList.remove('invalid'); correct++;
-      } else {
-        z.classList.add('invalid'); z.classList.remove('valid');
-      }
-    });
-    const score = Math.round((correct / nodes.length) * 100);
-    document.getElementById('score').textContent = `Punteggio: ${score}%`;
-  }
-
-  function resetGame() {
-    nodes = []; flatten(treeData);
-    init(); document.getElementById('score').textContent = '';
-  }
-
+  function resetGame(){ init(); }
   init();
 </script>
 </body>
