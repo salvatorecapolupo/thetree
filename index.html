@@ -1,123 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Tree Sorting Game</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
-    .tree-container, .shuffled-container {
-      min-height: 200px;
+    .drop-zone {
+      min-height: 50px;
       border: 2px dashed #ccc;
-      padding: 10px;
-      margin-bottom: 20px;
+      border-radius: 4px;
+      padding: 8px;
+      margin: 5px 0;
+      position: relative;
+    }
+    .drop-zone.placeholder::after {
+      content: 'Trascina qui';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: #ccc;
+      font-size: 0.9rem;
+      pointer-events: none;
     }
     .node {
-      padding: 8px 12px;
-      margin: 5px;
+      display: inline-block;
+      padding: 6px 10px;
+      margin: 3px;
       background-color: #f8f9fa;
       border: 1px solid #ccc;
       border-radius: 4px;
-      cursor: grab;
+      cursor: move;
+      user-select: none;
     }
-    .valid {
-      background-color: #d4edda !important;
-    }
-    .invalid {
-      background-color: #f8d7da !important;
-    }
+    .valid { background-color: #d4edda !important; }
+    .invalid { background-color: #f8d7da !important; }
   </style>
 </head>
 <body>
 <div class="container py-4">
-  <h2 class="text-center mb-4">Tree Sorting Game</h2>
+  <h2 class="text-center mb-4">The Ultimate Tree Sorting Game</h2>
   <div class="row">
-    <div class="col-md-6">
-      <h4>Shuffled Nodes</h4>
-      <div id="shuffled" class="shuffled-container d-flex flex-wrap"></div>
+    <div class="col-md-4 mb-4">
+      <div class="card">
+        <div class="card-header">Nodi da Ordinare</div>
+        <div id="shuffled" class="card-body drop-zone" ondragover="allowDrop(event)" ondrop="dropToShuffled(event)"></div>
+      </div>
     </div>
-    <div class="col-md-6">
-      <h4>Your Tree</h4>
-      <div id="tree" class="tree-container d-flex flex-wrap"></div>
+    <div class="col-md-8 mb-4">
+      <div class="card">
+        <div class="card-header">Struttura Albero</div>
+        <div id="tree" class="card-body"></div>
+      </div>
     </div>
   </div>
   <div class="text-center">
-    <button class="btn btn-primary" onclick="validateTree()">Valida</button>
+    <button id="validateBtn" class="btn btn-success mr-2" onclick="validateTree()">Valida</button>
+    <button id="resetBtn" class="btn btn-secondary" onclick="resetGame()">Reset</button>
     <p id="score" class="mt-3 font-weight-bold"></p>
   </div>
 </div>
 
 <script>
-  const correctTree = [
-    { id: 1, label: 'Root', parent: null },
-    { id: 2, label: 'Child 1', parent: 1 },
-    { id: 3, label: 'Child 2', parent: 1 },
-    { id: 4, label: 'Subchild 1', parent: 2 },
-    { id: 5, label: 'Subchild 2', parent: 2 },
-  ];
+  // Fase 1: Definizione Albero (struttura ad albero n-ario)
+  const treeStructure = {
+    id: 1, label: 'Root', children: [
+      { id: 2, label: 'Child 1', children: [
+        { id: 4, label: 'Subchild 1', children: [] },
+        { id: 5, label: 'Subchild 2', children: [] }
+      ]},
+      { id: 3, label: 'Child 2', children: [] }
+    ]
+  };
 
-  let shuffledTree = [...correctTree].sort(() => Math.random() - 0.5);
+  let flatNodes = [];
+  // Flatten the tree to get nodes list
+  function flatten(node) {
+    flatNodes.push({ id: node.id, label: node.label, parent: node.parentId });
+    node.children.forEach(child => { child.parentId = node.id; flatten(child); });
+  }
+  treeStructure.parentId = null;
+  flatten(treeStructure);
 
-  function createNodeElement(node) {
+  let shuffled = [];
+  function initShuffled() {
+    shuffled = flatNodes.slice().sort(() => Math.random() - 0.5);
+  }
+
+  // Fase 2: Rendering
+  function createNodeEl(node) {
     const div = document.createElement('div');
-    div.classList.add('node');
-    div.setAttribute('draggable', true);
-    div.setAttribute('data-id', node.id);
-    div.innerText = node.label;
-    div.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('text/plain', node.id);
-    });
+    div.className = 'node';
+    div.draggable = true;
+    div.dataset.id = node.id;
+    div.textContent = node.label;
+    div.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', node.id));
     return div;
   }
 
-  function allowDrop(e) {
-    e.preventDefault();
+  function createDropZone(expectedId) {
+    const zone = document.createElement('div');
+    zone.className = 'drop-zone placeholder';
+    zone.dataset.expected = expectedId;
+    zone.addEventListener('dragover', allowDrop);
+    zone.addEventListener('drop', e => dropToZone(e, zone));
+    return zone;
   }
 
-  function handleDrop(e, target) {
+  function buildTree(container, node) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mb-2';
+    const label = document.createElement('strong');
+    label.textContent = node.label;
+    wrapper.appendChild(label);
+    const zone = createDropZone(node.id);
+    wrapper.appendChild(zone);
+    if (node.children.length) {
+      const childWrapper = document.createElement('div');
+      childWrapper.className = 'ml-4';
+      node.children.forEach(child => childWrapper.appendChild(buildTree(document.createElement('div'), child)));
+      wrapper.appendChild(childWrapper);
+    }
+    container.appendChild(wrapper);
+    return wrapper;
+  }
+
+  function render() {
+    const shuffledEl = document.getElementById('shuffled');
+    const treeEl = document.getElementById('tree');
+    shuffledEl.innerHTML = '';
+    treeEl.innerHTML = '';
+    shuffled.forEach(n => shuffledEl.appendChild(createNodeEl(n)));
+    buildTree(treeEl, treeStructure);
+  }
+
+  // Drag & Drop
+  function allowDrop(e) { e.preventDefault(); }
+  function dropToZone(e, zone) {
     e.preventDefault();
     const id = e.dataTransfer.getData('text/plain');
-    const dragged = document.querySelector(`[data-id='${id}']`);
-    if (!target.contains(dragged)) target.appendChild(dragged);
+    const node = document.querySelector(`[data-id='${id}']`);
+    if (zone.firstChild) zone.firstChild.remove();
+    zone.classList.remove('placeholder');
+    zone.appendChild(node);
+  }
+  function dropToShuffled(e) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    const node = document.querySelector(`[data-id='${id}']`);
+    e.currentTarget.appendChild(node);
   }
 
-  function renderNodes() {
-    const shuffledContainer = document.getElementById('shuffled');
-    const treeContainer = document.getElementById('tree');
-    shuffledContainer.innerHTML = '';
-    treeContainer.innerHTML = '';
-
-    shuffledTree.forEach(node => {
-      const el = createNodeElement(node);
-      shuffledContainer.appendChild(el);
-    });
-
-    shuffledContainer.addEventListener('dragover', allowDrop);
-    shuffledContainer.addEventListener('drop', e => handleDrop(e, shuffledContainer));
-
-    treeContainer.addEventListener('dragover', allowDrop);
-    treeContainer.addEventListener('drop', e => handleDrop(e, treeContainer));
-  }
-
+  // Fase 3: Validazione
   function validateTree() {
-    const userNodes = Array.from(document.getElementById('tree').children);
-    let score = 0;
-    userNodes.forEach((el, index) => {
-      const id = parseInt(el.dataset.id);
-      if (correctTree[index] && correctTree[index].id === id) {
-        el.classList.add('valid');
-        el.classList.remove('invalid');
-        score++;
+    let correct = 0;
+    const zones = document.querySelectorAll('.drop-zone');
+    zones.forEach(zone => {
+      const expected = zone.dataset.expected;
+      const child = zone.querySelector('.node');
+      if (child && child.dataset.id === expected) {
+        zone.classList.add('valid'); zone.classList.remove('invalid'); correct++;
       } else {
-        el.classList.add('invalid');
-        el.classList.remove('valid');
+        zone.classList.add('invalid'); zone.classList.remove('valid');
       }
     });
-    const percentage = Math.round((score / correctTree.length) * 100);
-    document.getElementById('score').innerText = `Punteggio: ${percentage}%`;
+    const score = Math.round((correct / flatNodes.length) * 100);
+    document.getElementById('score').innerText = `Punteggio: ${score}%`;
   }
 
-  renderNodes();
+  // Reset
+  function resetGame() {
+    flatNodes = [];
+    flatten(treeStructure);
+    initShuffled();
+    document.getElementById('score').innerText = '';
+    render();
+  }
+
+  // Avvio
+  initShuffled(); render();
 </script>
 </body>
 </html>
