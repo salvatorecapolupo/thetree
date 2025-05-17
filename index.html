@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
   <style>
     body { background: #f0f2f5; }
-    .tree-container { position: relative; padding: 20px; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .config-area { margin-bottom: 20px; }
+    .tree-container { position: relative; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     .tree ul { position: relative; padding-left: 1rem; }
     .tree ul::before { content: ''; position: absolute; top: 0; left: 0.5rem; width: 2px; height: 100%; background: #8B4513; }
     .tree li { margin: 1rem 0; position: relative; padding-left: 1rem; }
@@ -19,7 +20,7 @@
       display: flex; flex-wrap: wrap; align-items: center; padding: 5px;
       font-size: 0.9rem; color: #228B22; margin-top: 5px;
     }
-    .drop-zone.placeholder::after { content: 'Trascina uno o più nodi qui'; color: #228B22; }
+    .drop-zone.placeholder::after { content: 'Trascina il nodo qui'; color: #228B22; }
     .drop-zone.valid { background: #d4edda; border-color: #28a745; color: #155724; }
     .drop-zone.invalid { background: #f8d7da; border-color: #dc3545; color: #721c24; }
 
@@ -32,7 +33,7 @@
     }
     .node:active { transform: scale(0.95); }
 
-    #shuffled { min-height: 100px; background: #ffffff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    #shuffled { min-height: 100px; background: #fff; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       display: flex; flex-wrap: wrap; }
 
     .controls { margin-top: 15px; }
@@ -40,6 +41,11 @@
 </head>
 <body>
 <div class="container py-5">
+  <div class="config-area">
+    <h5>Configura JSON Albero</h5>
+    <textarea id="jsonInput" class="form-control" rows="4">{"id":1,"label":"Root","children":[{"id":2,"label":"Child 1","children":[{"id":4,"label":"Subchild 1","children":[]},{"id":5,"label":"Subchild 2","children":[]}]},{"id":3,"label":"Child 2","children":[]}]}</textarea>
+    <button class="btn btn-primary mt-2" onclick="loadTree()">Carica Albero</button>
+  </div>
   <h2 class="text-center mb-4">Tree Sorting Game</h2>
   <div class="row">
     <div class="col-lg-4">
@@ -61,31 +67,33 @@
 </div>
 
 <script>
-  const treeData = { id:1,label:'Root',children:[
-      {id:2,label:'Child 1',children:[{id:4,label:'Subchild 1',children:[]},{id:5,label:'Subchild 2',children:[]}]},
-      {id:3,label:'Child 2',children:[]},
-      {id:6,label:'Child 3',children:[]}
-    ]};
+  let treeData = {};
+  let nodes = [], shuffled = [], expectedCount = {}, totalNodes = 0;
 
-  let nodes=[], shuffled = [], expectedCount = {}, totalNodes = 0;
+  function loadTree() {
+    try {
+      treeData = JSON.parse(document.getElementById('jsonInput').value);
+      init();
+    } catch (e) {
+      alert('JSON non valido');
+    }
+  }
 
-  // Pre-calc flatten and expected counts
   function setup() {
     nodes = [];
     expectedCount = {};
     function recurse(n, p = null) {
-      nodes.push({ id: n.id, parent: p });
+      nodes.push({ id: n.id, parent: p, label: n.label });
       expectedCount[n.id] = n.children.length;
       n.children.forEach(child => recurse(child, n.id));
     }
     recurse(treeData);
-    // exclude the root's own placement from scoring
-    totalNodes = nodes.filter(n => n.parent !== null).length;
+    totalNodes = nodes.length;
   }
 
   function init() {
     setup();
-    shuffled = nodes.filter(n => n.id !== treeData.id).slice().sort(() => Math.random() - 0.5);
+    shuffled = nodes.slice().sort(() => Math.random() - 0.5);
     render();
     document.getElementById('score').textContent = '';
   }
@@ -93,27 +101,16 @@
   function createNode(n) {
     const el = document.createElement('div');
     el.className = 'node'; el.draggable = true;
-    el.textContent = nodes.find(x => x.id === n.id).id === n.id ? getLabel(n.id) : '';
+    el.textContent = n.label;
     el.dataset.id = n.id;
     el.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', n.id));
     return el;
-  }
-
-  function getLabel(id) {
-    let label = '';
-    function find(n) { if(n.id === id) label = n.label; else n.children.forEach(find); }
-    find(treeData);
-    return label;
   }
 
   function createTree(data) {
     const ul = document.createElement('ul');
     data.forEach(item => {
       const li = document.createElement('li');
-      const box = document.createElement('div');
-      box.textContent = item.label;
-      box.style.fontWeight = '600'; box.style.color = '#228B22';
-      li.appendChild(box);
       const dz = document.createElement('div');
       dz.className = 'drop-zone placeholder'; dz.dataset.expected = item.id;
       dz.addEventListener('dragover', allowDrop);
@@ -134,6 +131,7 @@
   }
 
   function allowDrop(e) { e.preventDefault(); }
+
   function dropToZone(e, zone) {
     e.preventDefault();
     const id = parseInt(e.dataTransfer.getData('text/plain'));
@@ -141,6 +139,7 @@
     if (!zone.contains(n)) zone.appendChild(n);
     zone.classList.remove('placeholder');
   }
+
   function dropToPool(e) {
     e.preventDefault();
     const id = parseInt(e.dataTransfer.getData('text/plain'));
@@ -166,7 +165,8 @@
   }
 
   function resetGame() { init(); }
-  init();
+  // Carica default
+  loadTree();
 </script>
 </body>
 </html>
