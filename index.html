@@ -67,48 +67,105 @@
       {id:6,label:'Child 3',children:[]}
     ]};
 
-  let nodes=[],shuffled=[];
-  function flatten(n,p=null){ nodes.push({id:n.id,label:n.label,parent:p}); n.children.forEach(c=>flatten(c,n.id)); }
-  function init(){ nodes=[]; flatten(treeData); shuffled=nodes.slice().sort(()=>Math.random()-0.5); render(); document.getElementById('score').textContent=''; }
+  let nodes=[], shuffled = [], expectedCount = {}, totalNodes = 0;
 
-  function createNode(n){ const el=document.createElement('div'); el.className='node'; el.draggable=true; el.textContent=n.label; el.dataset.id=n.id;
-    el.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',n.id)); return el;
+  // Pre-calc flatten and expected counts
+  function setup() {
+    nodes = [];
+    expectedCount = {};
+    function recurse(n, p = null) {
+      nodes.push({ id: n.id, parent: p });
+      expectedCount[n.id] = n.children.length;
+      n.children.forEach(child => recurse(child, n.id));
+    }
+    recurse(treeData);
+    // exclude the root's own placement from scoring
+    totalNodes = nodes.filter(n => n.parent !== null).length;
   }
 
-  function createTree(data){ const ul=document.createElement('ul'); data.forEach(item=>{
-      const li=document.createElement('li');
-      const box=document.createElement('div'); box.textContent=item.label; box.style.fontWeight='600'; box.style.color='#228B22'; li.appendChild(box);
-      const dz=document.createElement('div'); dz.className='drop-zone placeholder'; dz.dataset.expected=item.id;
-      dz.addEventListener('dragover',allowDrop); dz.addEventListener('drop',e=>dropToZone(e,dz)); li.appendChild(dz);
-      if(item.children.length) li.appendChild(createTree(item.children)); ul.appendChild(li);
-    }); return ul;
+  function init() {
+    setup();
+    shuffled = nodes.filter(n => n.id !== treeData.id).slice().sort(() => Math.random() - 0.5);
+    render();
+    document.getElementById('score').textContent = '';
   }
 
-  function render(){ const pool=document.getElementById('shuffled'), tree=document.getElementById('tree'); pool.innerHTML=''; tree.innerHTML='';
-    shuffled.forEach(n=>pool.appendChild(createNode(n)));
+  function createNode(n) {
+    const el = document.createElement('div');
+    el.className = 'node'; el.draggable = true;
+    el.textContent = nodes.find(x => x.id === n.id).id === n.id ? getLabel(n.id) : '';
+    el.dataset.id = n.id;
+    el.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', n.id));
+    return el;
+  }
+
+  function getLabel(id) {
+    let label = '';
+    function find(n) { if(n.id === id) label = n.label; else n.children.forEach(find); }
+    find(treeData);
+    return label;
+  }
+
+  function createTree(data) {
+    const ul = document.createElement('ul');
+    data.forEach(item => {
+      const li = document.createElement('li');
+      const box = document.createElement('div');
+      box.textContent = item.label;
+      box.style.fontWeight = '600'; box.style.color = '#228B22';
+      li.appendChild(box);
+      const dz = document.createElement('div');
+      dz.className = 'drop-zone placeholder'; dz.dataset.expected = item.id;
+      dz.addEventListener('dragover', allowDrop);
+      dz.addEventListener('drop', e => dropToZone(e, dz));
+      li.appendChild(dz);
+      if (item.children.length) li.appendChild(createTree(item.children));
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  function render() {
+    const pool = document.getElementById('shuffled'), tree = document.getElementById('tree');
+    pool.innerHTML = '';
+    tree.innerHTML = '';
+    shuffled.forEach(n => pool.appendChild(createNode(n)));
     tree.appendChild(createTree([treeData]));
   }
 
-  function allowDrop(e){ e.preventDefault(); }
-  function dropToZone(e,zone){ e.preventDefault(); const id=e.dataTransfer.getData('text/plain'); const n=document.querySelector(`[data-id='${id}']`);
+  function allowDrop(e) { e.preventDefault(); }
+  function dropToZone(e, zone) {
+    e.preventDefault();
+    const id = parseInt(e.dataTransfer.getData('text/plain'));
+    const n = document.querySelector(`[data-id='${id}']`);
     if (!zone.contains(n)) zone.appendChild(n);
     zone.classList.remove('placeholder');
   }
-  function dropToPool(e,returning=false){ e.preventDefault(); const id=e.dataTransfer.getData('text/plain'); const n=document.querySelector(`[data-id='${id}']`);
-    if(!returning && document.getElementById('shuffled').contains(n)) return;
+  function dropToPool(e) {
+    e.preventDefault();
+    const id = parseInt(e.dataTransfer.getData('text/plain'));
+    const n = document.querySelector(`[data-id='${id}']`);
     document.getElementById('shuffled').appendChild(n);
   }
 
-  function validateTree(){ let correct=0;
-    document.querySelectorAll('.drop-zone').forEach(z=>{
-      const exp=z.dataset.expected; const children=Array.from(z.querySelectorAll('.node')).map(el=>el.dataset.id);
-      if(children.length && children.every((cid,i)=>nodes.find(n=>n.id==cid && n.parent==exp))){ z.classList.add('valid'); z.classList.remove('invalid'); correct+=children.length; }
-      else{ z.classList.add('invalid'); z.classList.remove('valid'); }
+  function validateTree() {
+    let correctNodes = 0;
+    document.querySelectorAll('.drop-zone').forEach(z => {
+      const exp = parseInt(z.dataset.expected);
+      const children = Array.from(z.querySelectorAll('.node')).map(el => parseInt(el.dataset.id));
+      const correctCount = children.filter(cid => nodes.find(n => n.id === cid && n.parent === exp)).length;
+      if (correctCount === expectedCount[exp]) {
+        z.classList.add('valid'); z.classList.remove('invalid');
+        correctNodes += correctCount;
+      } else {
+        z.classList.add('invalid'); z.classList.remove('valid');
+      }
     });
-    document.getElementById('score').textContent=`Punteggio: ${Math.round(correct/nodes.length*100)}%`;
+    const score = totalNodes ? Math.round((correctNodes / totalNodes) * 100) : 0;
+    document.getElementById('score').textContent = `Punteggio: ${score}%`;
   }
 
-  function resetGame(){ init(); }
+  function resetGame() { init(); }
   init();
 </script>
 </body>
